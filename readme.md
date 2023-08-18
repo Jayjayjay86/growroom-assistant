@@ -37,5 +37,3 @@ Contributions and suggestions are welcome! Feel free to submit pull requests or 
 
 License
 This project is licensed under the MIT License. See the LICENSE file for details.
-
-Remember to customize the filenames, feature descriptions, and any other specific details according to your project. You can include information about your project's structure, how to use different settings files, and any other important information you'd like to convey to your users.
