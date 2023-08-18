@@ -1,0 +1,14 @@
+[
+    {
+        "id": 1,
+        "ip": "192.168.1.33",
+        "token": "dd596db3288a0d48aa756073ad4e7b3f",
+        "active": true
+    },
+    {
+        "id": 2,
+        "ip": "192.168.1.37",
+        "token": "7110c3e10ebfc68c55bf44f0e610a15c",
+        "active": true
+    }
+]

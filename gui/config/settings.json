@@ -1,0 +1,42 @@
+{
+    "humidity_thresholds": {
+        "vegetative": {
+            "high": 75,
+            "low": 59
+        },
+        "flowering": {
+            "high": 65,
+            "low": 54
+        },
+        "curing": {
+            "high": 61,
+            "low": 54
+        }
+    },
+    "warning_thresholds": {
+        "humidity": {
+            "high": 75,
+            "low": 52
+        }
+    },
+    "temperature_thresholds": {
+        "day": {
+            "high": 27,
+            "low": 24
+        },
+        "night": {
+            "high": 25,
+            "low": 23
+        }
+    },
+    "lights": {
+        "on": {
+            "hour": 6,
+            "minute": 0
+        },
+        "off": {
+            "hour": 23,
+            "minute": 0
+        }
+    }
+}
