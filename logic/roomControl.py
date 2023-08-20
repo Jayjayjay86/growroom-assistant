@@ -12,8 +12,8 @@ class RoomController:
         self.timeout = None
         self.model = None
         self.mapping = 0
-        self.retry_count = 3
-        self.retry_delay = 30
+        self.retry_count = 1
+        self.retry_delay = 1
 
         # Mapping of properties for dehumidifier
         self.prop_map = {
@@ -46,21 +46,17 @@ class RoomController:
         prop_info = self.prop_map[prop_name]
         for i in range(self.retry_count):
             try:
-                return {
+                data = {
                     "data": self.device.get_property_by(
                         siid=prop_info["siid"], piid=prop_info["piid"]
-                    ),
-                    "connected": True,
+                    )
                 }
+
+                return data
             except DeviceException:
                 time.sleep(self.retry_delay)
 
-        return {
-            "data": "Failed to get {} after {} retries".format(
-                prop_name, self.retry_count
-            ),
-            "connected": False,
-        }
+        return 0
 
     def _set_property(self, prop_name, value):
         prop_info = self.prop_map[prop_name]
@@ -69,55 +65,64 @@ class RoomController:
                 return {
                     "data": self.device.set_property_by(
                         siid=prop_info["siid"], piid=prop_info["piid"], value=value
-                    ),
-                    "connected": True,
+                    )
                 }
             except DeviceException:
                 time.sleep(self.retry_delay)
-        return {
-            "data": "Failed to get {} after {} retries".format(
-                prop_name, self.retry_count
-            ),
-            "connected": False,
-        }
+        return 0
 
     def get_temperature(self):
-        unit_temp = self._get_property("temp")["data"][0]["value"]
-        dispensation_between_unit_room = 2
-        return unit_temp - dispensation_between_unit_room
+        try:
+            unit_temp = self._get_property("temp")["data"][0]["value"]
+        except:
+            unit_temp = 0
+        if unit_temp != 0:
+            dispensation_between_unit_room = 2
+            return unit_temp - dispensation_between_unit_room
+        else:
+            return unit_temp
 
     def get_humidity(self):
-        result = self._get_property("humidity")
-        if result["connected"]:
+        try:
+            result = self._get_property("humidity")
+        except:
+            result = 0
+        if result != 0:
             return result["data"][0]["value"]
         else:
-            print(result["data"])
+            return result
 
     def get_target(self):
-        result = self._get_property("target")
-
-        if result["connected"]:
+        try:
+            result = self._get_property("target")
+        except:
+            result = 0
+        if result != 0:
             return result["data"][0]["value"]
         else:
-            print(result["data"])
+            return result
 
     def set_target(self, value):
-        command = self._set_property(prop_name="target", value=value)
-        if command["connected"]:
+        try:
+            command = self._set_property(prop_name="target", value=value)
+        except:
+            command = 0
+        if command != 0:
             return command["data"]
         else:
-            print(command["data"])
-
-    def getStatus(self):
-        return self.device._fetch_info()
+            return command
 
     def return_all_sensors(self):
-        x = []
-        x.append(self.get_humidity())
-        x.append(self.get_target())
-        x.append(self.get_temperature())
-
-        return x
+        data = []
+        humidity = self.get_humidity()
+        temperature = self.get_temperature()
+        target = self.get_target()
+        if humidity == 0 or temperature == 0 or target == 0:
+            return 0
+        data.append(humidity)
+        data.append(temperature)
+        data.append(target)
+        return data
 
 
 # try:

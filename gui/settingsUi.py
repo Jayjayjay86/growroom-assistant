@@ -6,6 +6,7 @@ from logic.jsonFileManager import JSONFileManager
 from logic.roomControl import RoomController
 from gui.editDialogUi import EditDialogUi
 from gui.deleteDialogUi import DeleteDialogUi
+from gui.doubleSlider import DoubleSlider
 
 
 class SettingsWindow(QDialog):

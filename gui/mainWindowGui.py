@@ -31,9 +31,12 @@ style_active_off = (
     "background-color: rgb(0, 16, 0);"
 )
 degree_symbol = "\u00b0"
-REFRESH_VALUES_TIMER_MILLIS = 12000
-SEND_ROOM_CONTROL_TIMER_MILLIS = 90000
-UNIT_HUMIDITY_TARGETS = {"low": 60, "high": 70}
+
+HANDLE_ACTIVE_DEHUMIDIFIERS_TIME_MILLIS = 120000
+HANDLE_DEHUMDIFIER_DATA_TIME_MILLIS = 12000
+HANDLE_SEND_COMMANDS_TIME_MILLIS = 90000
+
+UNIT_HUMIDITY_extracted_TARGETS = {"low": 60, "high": 70}
 
 
 class TheMainWindow(QMainWindow):
@@ -224,191 +227,212 @@ class TheMainWindow(QMainWindow):
         self.menuSettings.addAction(self.actionSettings)
         self.menuBar.addAction(self.menuSettings.menuAction())
 
+        # render text to display on screen
         self.mode_label.setText(("Mode:"))
         self.unit_details_label.setText(("Dehumidifier Readings:"))
         self.humidity_label.setText(("Humidity:"))
         self.temperature_label.setText(("Temperature:"))
         self.target_label.setText(("Target:"))
-
         self.aircon_setting_label.setText(("Aircon Setting:"))
         self.lights_label.setText(("Lights:"))
         self.menuSettings.setTitle(("File"))
         self.actionSettings.setText(("Settings"))
 
         # VARIABLES FOR DATA
-        self.unitDataList = []
+        self.active_dehumidifier_list = []
         self.lightsOnTime = ""
         self.lightsOffTime = ""
         self.modes = ""
         self.areLightsOn = False
 
         # click triggers
-        self.units_combo.currentIndexChanged.connect(self.handleChangeUnitsCombo)
+        self.units_combo.currentIndexChanged.connect(self.handleRefreshDehumidifierData)
         self.actionSettings.triggered.connect(self.handleOpenSettings)
         self.mode_combo.currentIndexChanged.connect(self.handleModeColorChange)
 
         # first time function calls
-        self.populateModeComboBox()
-        self.populateUnitComboBox()
-        self.refreshTime()
-        self.handleSetLights()
-        self.refreshEnvironmentValues()
-        self.setEnvironment()
+        self.handleRefreshTime()
+        self.handleModeComboBox()
+        self.handleUnitComboBox()
         self.handleSetAirConValue()
+        self.handleLightColors()
+        self.handleActiveDehumidifiersList()
+        self.handleRefreshDehumidifierData()
+
         #
         # Threads and Timers
         #
         # set timer for correcting room environment
-        self.sendRoomControlTimer = QTimer()
-        self.sendRoomControlTimer.setInterval(SEND_ROOM_CONTROL_TIMER_MILLIS)
+        self.handleSendCommandsTimer = QTimer()
+        self.handleSendCommandsTimer.setInterval(HANDLE_SEND_COMMANDS_TIME_MILLIS)
         # connect timer to function
-        self.sendRoomControlTimer.timeout.connect(self.setEnvironment)
+        self.handleSendCommandsTimer.timeout.connect(self.handleSendCommands)
         # create thread for timer
-        self.sendRoomControlThread = QThread()
-        self.sendRoomControlTimer.moveToThread(self.sendRoomControlThread)
+        self.handleSendCommandsThread = QThread()
+        self.handleSendCommandsTimer.moveToThread(self.handleSendCommandsThread)
         # connect thread to start timer when thread begins.
-        self.sendRoomControlThread.started.connect(self.sendRoomControlTimer.start)
+        self.handleSendCommandsThread.started.connect(
+            self.handleSendCommandsTimer.start
+        )
         # begin thread
-        self.sendRoomControlThread.start()
+        self.handleSendCommandsThread.start()
         #
         #
         #
-        # set timer for refresh values
-        self.refreshValuesTimer = QTimer()
-        self.refreshValuesTimer.setInterval(REFRESH_VALUES_TIMER_MILLIS)  # 12 seconds
+        # Set timer for updating duhumidifier value data.
+        self.updateDehumidifierDataTimer = QTimer()
+        self.updateDehumidifierDataTimer.setInterval(
+            HANDLE_DEHUMDIFIER_DATA_TIME_MILLIS
+        )
         # connect timer to function
-        self.refreshValuesTimer.timeout.connect(self.refreshEnvironmentValues)
+        self.updateDehumidifierDataTimer.timeout.connect(
+            self.handleRefreshDehumidifierData
+        )
         # create thread for timer
-        self.refreshValuesThread = QThread()
+        self.updateDehumidifierDataThread = QThread()
+        self.updateDehumidifierDataTimer.moveToThread(self.updateDehumidifierDataThread)
+        # connect thread to start timer when thread begins.
+        self.updateDehumidifierDataThread.started.connect(
+            self.updateDehumidifierDataTimer.start
+        )
+        # begin thread
+        self.updateDehumidifierDataThread.start()
+        #
+        #
+
+        #
+        # Set timer for putting active dehumidifers into the list.
+        self.handleActiveDehumidifiersListTimer = QTimer()
+        self.handleActiveDehumidifiersListTimer.setInterval(
+            HANDLE_ACTIVE_DEHUMIDIFIERS_TIME_MILLIS
+        )
+        # connect timer to function
+        self.handleActiveDehumidifiersListTimer.timeout.connect(
+            self.handleActiveDehumidifiersList
+        )
+        # create thread for timer
+        self.handleActiveDehumidifiersListThread = QThread()
         # move timer to thread
-        self.refreshValuesTimer.moveToThread(self.refreshValuesThread)
+        self.handleActiveDehumidifiersListTimer.moveToThread(
+            self.handleActiveDehumidifiersListThread
+        )
         # connect thread to start timer when thread begins.
-        self.refreshValuesThread.started.connect(self.refreshValuesTimer.start)
+        self.handleActiveDehumidifiersListThread.started.connect(
+            self.handleActiveDehumidifiersListTimer.start
+        )
         # begin thread
-        self.refreshValuesThread.start()
+        self.handleActiveDehumidifiersListThread.start()
         #
         #
         #
 
         QMetaObject.connectSlotsByName(self)
 
-    def handleOpenSettings(self):
-        settingsUi.exec_()
-        return
+    def handleSendCommands(self):
+        print("sending commands")
+        # Requested mode from mode combo-box.
+        selectedMode = self.mode_combo.currentText()
+        # Open settings
+        settings = JSONFileManager(selection="settings").read_json()
 
-    def handleChangeUnitsCombo(self):
-        dehumidifierUnitList = JSONFileManager(selection="devices").read_json()
+        # unpack values
+        humidity_thresholds = settings["humidity_thresholds"].items()
+        humidity_warning_thresholds = settings["warning_thresholds"]["humidity"]
 
-        selected_unit = self.units_combo.currentText()
-        selected_unit_id = selected_unit[4:5]
-        for unit in self.unitDataList:
-            if int(unit[0]) == int(selected_unit_id):
-                data = unit[1]
-                self.humidity_value.setText(f"{data[0]}{degree_symbol}")
-                self.target_value.setText(f"{data[1]}{degree_symbol}")
-                self.temperature_value.setText(f"{data[2]}{degree_symbol}")
+        for mode, targets in humidity_thresholds:
+            if mode.lower() == selectedMode.lower():
+                extracted_targets = targets
+        if len(self.active_dehumidifier_list) <= 0:
+            return
+        for data in self.active_dehumidifier_list:
+            device_id = data[0]
+            ip = data[1]
+            token = data[2]
+
+            # Connect to dehumidiifer
+
+            dehumidifier = RoomController(ip=ip, token=token)
+            # Check humidity against targets.
+            # humidity good
+            h, tr, t = dehumidifier.return_all_sensors()
+            if h >= extracted_targets["low"] and h <= extracted_targets["high"]:
+                continue
+
+            # humidity too low
+            if h < extracted_targets["low"]:
+                if tr == UNIT_HUMIDITY_extracted_TARGETS["low"]:
+                    # Issue command
+                    dehumidifier.set_target(UNIT_HUMIDITY_extracted_TARGETS["high"])
+
+            # humidity too high
+            elif h > extracted_targets["high"]:
+                if tr == UNIT_HUMIDITY_extracted_TARGETS["high"]:
+                    # Issue command
+                    dehumidifier.set_target(UNIT_HUMIDITY_extracted_TARGETS["low"])
+
+            # Check warning levels (possible air-con intervention to control).
+            elif h <= humidity_warning_thresholds["low"]:
+                # Issue command
+                dehumidifier.set_target(UNIT_HUMIDITY_extracted_TARGETS["high"])
+
+            elif h >= humidity_warning_thresholds["high"]:
+                # Issue command
+                dehumidifier.set_target(UNIT_HUMIDITY_extracted_TARGETS["low"])
+
+    # make asyncronous
+    def handleRefreshDehumidifierData(self):
+        print("refreshing data")
+        for unit in self.active_dehumidifier_list:
+            # Try to connect with the dehumidifier using extracted ip and token.
+            dehumidifier = RoomController(ip=unit[1], token=unit[2])
+            h, t, tr = dehumidifier.return_all_sensors()
+            # Add dehumidifier to list.
+
+            if int(unit[0]) == int(self.units_combo.currentText()[4:5]):
+                self.humidity_value.setText(f"{h}{degree_symbol}")
+                self.target_value.setText(f"{tr}{degree_symbol}")
+                self.temperature_value.setText(f"{t}{degree_symbol}")
                 return
 
-    def refreshEnvironmentValues(self):
-        dehumidifierUnitList = JSONFileManager(selection="devices").read_json()
+    # make asyncronous
 
-        selected_unit = self.units_combo.currentText()
-        selected_unit_id = selected_unit[4:5]
+    def handleActiveDehumidifiersList(self):
+        print("checking active units")
+        # Open and parse dehumidifier list.
+        dehumidifiersList = JSONFileManager(selection="devices").read_json()
 
-        for unit in dehumidifierUnitList:
-            id = unit["id"]
-            ip = unit["ip"]
-            token = unit["token"]
-            try:
-                unit = RoomController(ip=ip, token=token)
-                active = True
+        # Iterate the list, filtering out inactive dehumidifiers.
+        # Append active dehumidifiers to the active list.
+        for unit in dehumidifiersList:
+            # Try to connect with the dehumidifier using extracted ip and token.
+            dehumidifier = RoomController(ip=unit["ip"], token=unit["token"])
+            data = dehumidifier.return_all_sensors()
+            if data == 0:
+                unit["active"] = False
+                JSONFileManager(selection="devices").replace_object_by_id(
+                    unit["id"],
+                    new_object={
+                        "id": unit["id"],
+                        "ip": unit["ip"],
+                        "token": unit["token"],
+                        "active": False,
+                    },
+                )
+            else:
+                # Add dehumidifier to list.
+                self.active_dehumidifier_list.append(
+                    (
+                        unit["id"],
+                        unit["ip"],
+                        unit["token"],
+                    )
+                )
 
-            except:
-                active = False
-            new_object = {
-                "id": id,
-                "ip": ip,
-                "token": token,
-                "active": active,
-            }
-            JSONFileManager(selection="devices").replace_object_by_id(
-                id=id, new_object=new_object
-            )
-            self.unitDataList.append((id, unit.return_all_sensors(), ip, token, active))
-
-        for device in self.unitDataList:
-            if int(selected_unit_id) == int(device[0]):
-                data = device[1]
-                self.humidity_value.setText(f"{data[0]}{degree_symbol}")
-                self.target_value.setText(f"{data[1]}{degree_symbol}")
-                self.temperature_value.setText(f"{data[2]}{degree_symbol}")
-
-        if self.areLightsOn:
-            self.lights_value.setStyleSheet(style_lights_on)
-        else:
-            self.lights_value.setStyleSheet(style_lights_off)
-        self.refreshTime()
-        self.handleSetLights()
-        self.handleModeColorChange()
-
-    def handleSetAirConValue(self):
-        self.aircon_value.setText((f"#{degree_symbol}"))
-        return
-
-    def populateModeComboBox(self):
-        settings = JSONFileManager(selection="settings").read_json()
-        # unpack values
-        humidity_thresholds = settings["humidity_thresholds"]
-        self.modes = humidity_thresholds.keys()
-        for name in self.modes:
-            self.mode_combo.addItem(name.title())
-        self.handleModeColorChange()
-        return
-
-    def handleModeColorChange(self):
-        if self.mode_combo.currentText().lower() == "vegetative":
-            self.mode_combo.setStyleSheet("background-color: rgb(144, 238, 144);")
-        if self.mode_combo.currentText().lower() == "flowering":
-            self.mode_combo.setStyleSheet("background-color: rgb(216, 191, 216);")
-        if self.mode_combo.currentText().lower() == "curing":
-            self.mode_combo.setStyleSheet("background-color: rgb(240, 230, 140);")
-        return
-
-    def populateUnitComboBox(self):
-        dehumidifierUnitList = JSONFileManager(selection="devices").read_json()
-
-        if len(dehumidifierUnitList) <= 0:
-            self.units_combo.addItem("nothingFoundItem")
-            return
-        for i, unit in enumerate(dehumidifierUnitList):
-            self.units_combo.addItem(f"Id: {unit['id']} - Ip: {unit['ip']}")
-        self.units_combo.setCurrentIndex(1)
-        return
-
-    def refreshTime(self):
-        time_now = datetime.now()
-        date_as_int = time_now.day
-        month_name = time_now.strftime("%B")
-        day_now = time_now.strftime("%A")
-        time_now = time_now.strftime("%H:%M:%S")
-        date_suffix = "th"
-
-        if date_as_int == 1 or date_as_int == 21 or date_as_int == 31:
-            date_suffix = "st"
-        elif date_as_int == 2 or date_as_int == 22:
-            date_suffix = "nd"
-        elif date_as_int == 3 or date_as_int == 23:
-            date_suffix = "rd"
-
-        self.day_value.setText(f"{day_now} {date_as_int}{date_suffix}")
-        self.month_value.setText(month_name)
-        self.time_value.setText(f"{time_now}")
-        return
-
-    def handleSetLights(self):
+    def handleLightColors(self):
+        # Open settings file.
         settings = JSONFileManager(selection="settings").read_json()
 
-        # unpack values
+        # Unpack values.
         lights_on_time = settings["lights"]["on"]
         on_hour = lights_on_time["hour"]
         on_minute = lights_on_time["minute"]
@@ -417,13 +441,13 @@ class TheMainWindow(QMainWindow):
         off_hour = lights_off_time["hour"]
         off_minute = lights_off_time["minute"]
 
-        # time now
+        # Get the time now.
         now = datetime.now().time()
-        # set default light strip color
+        # Set default light strip color
         self.lights_value.setStyleSheet(style_lights_off)
         self.lights_label.setText("Lights: Off")
 
-        # check time
+        # Check times
         on_time = dt.time(on_hour, on_minute, 0)
         off_time = dt.time(off_hour, off_minute, 0)
 
@@ -436,77 +460,74 @@ class TheMainWindow(QMainWindow):
             self.lights_label.setText("Lights: On")
         return
 
-    def setEnvironment(self):
-        selectedMode = self.mode_combo.currentText()
+    def handleUnitComboBox(self):
+        # Clear box
+        self.units_combo.clear()
+        # Open dehumidifier list
+        dehumidifiersList = JSONFileManager(selection="devices").read_json()
+
+        # If list empty display empty message.
+        if len(dehumidifiersList) <= 0:
+            self.units_combo.addItem("Nothing Found!")
+            return
+        # Display details of dehumidifiers in the combo-box.
+        for i, unit in enumerate(dehumidifiersList):
+            if unit["active"] == True:
+                self.units_combo.addItem(f"Id: {unit['id']} - Ip: {unit['ip']}")
+        # Set the index of the combo-box to first
+        self.units_combo.setCurrentIndex(0)
+        return
+
+    def handleModeComboBox(self):
+        # Open settings config
         settings = JSONFileManager(selection="settings").read_json()
+        # Unpack values
+        humidity_thresholds = settings["humidity_thresholds"]
+        # Get names from settings of modes
+        self.modes = humidity_thresholds.keys()
+        # Apply name to combo-box.
+        for name in self.modes:
+            self.mode_combo.addItem(name.title())
+        # Change color of combo-box to match current selection
+        return
 
-        dehumidifierUnitList = JSONFileManager(selection="devices").read_json()
+    def handleOpenSettings(self):
+        settingsUi.exec_()
+        return
 
-        # unpack values
-        humidity_thresholds = settings["humidity_thresholds"].items()
-        humidity_warning_thresholds = settings["warning_thresholds"]["humidity"]
+    def handleSetAirConValue(self):
+        self.aircon_value.setText((f"# {degree_symbol}"))
+        return
 
-        for saved_name, saved_targets in humidity_thresholds:
-            if saved_name.lower() == selectedMode.lower():
-                targets = saved_targets
+    def handleModeColorChange(self):
+        if self.mode_combo.currentText().lower() == "vegetative":
+            self.mode_combo.setStyleSheet("background-color: rgb(144, 238, 144);")
+        if self.mode_combo.currentText().lower() == "flowering":
+            self.mode_combo.setStyleSheet("background-color: rgb(216, 191, 216);")
+        if self.mode_combo.currentText().lower() == "curing":
+            self.mode_combo.setStyleSheet("background-color: rgb(240, 230, 140);")
+        return
 
-        for data in self.unitDataList:
-            h, tr, t = data[1]
-            device_id = data[0]
-            ip = data[2]
-            token = data[3]
-            active = data[4]
-            if active == True:
-                try:
-                    dehumidifier = RoomController(ip=ip, token=token)
-                    active = True
-                except:
-                    active = False
+    def handleRefreshTime(self):
+        # Get time now and extract nessesary values.
+        time_now = datetime.now()
+        date_as_int = time_now.day
+        month_name = time_now.strftime("%B")
+        day_now = time_now.strftime("%A")
+        time_now = time_now.strftime("%H:%M:%S")
+        # Apply date suffix
+        date_suffix = "th"
 
-                new_object = {
-                    "id": device_id,
-                    "ip": ip,
-                    "token": token,
-                    "active": active,
-                }
-                JSONFileManager(selection="devices").replace_object_by_id(
-                    id=device_id, new_object=new_object
-                )
-            else:
-                try:
-                    dehumidifier = RoomController(ip=ip, token=token)
-                    active = True
-                except:
-                    active = False
-
-                new_object = {
-                    "id": device_id,
-                    "ip": ip,
-                    "token": token,
-                    "active": active,
-                }
-                JSONFileManager(selection="devices").replace_object_by_id(
-                    id=device_id, new_object=new_object
-                )
-            # # humidity good
-            if h >= targets["low"] and h <= targets["high"]:
-                pass
-
-            # humidity too low
-            if h < targets["low"]:
-                if tr == UNIT_HUMIDITY_TARGETS["low"]:
-                    response = dehumidifier.set_target(UNIT_HUMIDITY_TARGETS["high"])
-
-            # humidity too high
-            elif h > targets["high"]:
-                if tr == UNIT_HUMIDITY_TARGETS["high"]:
-                    response = dehumidifier.set_target(UNIT_HUMIDITY_TARGETS["low"])
-
-            elif h <= humidity_warning_thresholds["low"]:
-                response = dehumidifier.set_target(UNIT_HUMIDITY_TARGETS["high"])
-
-            elif h >= humidity_warning_thresholds["high"]:
-                response = dehumidifier.set_target(UNIT_HUMIDITY_TARGETS["low"])
+        if date_as_int == 1 or date_as_int == 21 or date_as_int == 31:
+            date_suffix = "st"
+        elif date_as_int == 2 or date_as_int == 22:
+            date_suffix = "nd"
+        elif date_as_int == 3 or date_as_int == 23:
+            date_suffix = "rd"
+        # Set values on screen
+        self.day_value.setText(f"{day_now} {date_as_int}{date_suffix}")
+        self.month_value.setText(month_name)
+        self.time_value.setText(f"{time_now}")
         return
 
 
