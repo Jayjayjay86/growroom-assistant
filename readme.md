@@ -1,5 +1,12 @@
 # Growroom Assistant
+
 The Growroom Assistant is an application designed to assist indoor gardeners in managing humidity levels and environmental conditions during various growing phases. It utilizes the PyQt framework along with the tinytuya and python-miio libraries to control dehumidifiers and air conditioners, ensuring optimal conditions for plant growth.
+
+[!IMPORTANT]
+You must already have your dehumdfiers token ready, via registering with the app and subsequently using either the website api or at the terminal with:
+``` miiocli cloud```
+filling out the stages and receiving the token/s.
+
 
 ## Features
 Automatic recognition of dehumidifiers and air conditioners using the provided dehumidifiers.json file.
@@ -11,6 +18,7 @@ Future feature: Nighttime temperature simulation using air conditioners.
 Install the required dependencies using the provided requirements file:
 
 ```pip install -r requirements.txt```
+
 ### Running the App:
 To start the application, execute:
 
@@ -30,7 +38,8 @@ Usage:
 Run the app and follow prompts to set up devices and desired humidity levels.
 Allow the app to manage humidity levels throughout different growing phases.
 
-Future feature: Configure air conditioners to simulate nighttime temperature changes.
+[!NOTE]
+Future feature: Configure air conditioners to reduce night-time temperatures.
 
 ## Contributing
 Contributions and suggestions are welcome! Feel free to submit pull requests or issues if you encounter problems or have ideas for improvements.
