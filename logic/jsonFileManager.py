@@ -74,3 +74,19 @@ class JSONFileManager:
             return True
         else:
             return False
+
+    def get_object_by_id(self, id):
+        with open(self.file_path, "r") as file:
+            data = json.load(file)
+
+        # Find the index of the object based on its ID
+
+        for index, obj in enumerate(data):
+            if int(obj["id"]) == int(id):
+                object_index = index
+                break
+
+        if object_index is not None:
+            return data[object_index]
+        else:
+            return 0

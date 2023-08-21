@@ -6,7 +6,6 @@ from logic.jsonFileManager import JSONFileManager
 from logic.roomControl import RoomController
 from gui.editDialogUi import EditDialogUi
 from gui.deleteDialogUi import DeleteDialogUi
-from gui.doubleSlider import DoubleSlider
 
 
 class SettingsWindow(QDialog):
@@ -50,14 +49,21 @@ class SettingsWindow(QDialog):
         )
         self.dehumidifier_listview.setObjectName("dehumidifier_listview")
         self.verticalLayout.addWidget(self.dehumidifier_listview)
-        self.dehumidifier_delete_pushbutton = QPushButton(self.dehumidifierFrame)
-        self.dehumidifier_delete_pushbutton.setObjectName(
-            "dehumidifier_delete_pushbutton"
-        )
-        self.verticalLayout.addWidget(self.dehumidifier_delete_pushbutton)
+        self.buttonsLayout = QHBoxLayout()
+        self.buttonsLayout.setObjectName("buttonsLayout")
+        self.deleteDehumidifierpushButton = QPushButton(self.dehumidifierFrame)
+        self.deleteDehumidifierpushButton.setObjectName("deleteDehumidifierpushButton")
+        self.buttonsLayout.addWidget(self.deleteDehumidifierpushButton)
         self.dehumidifier_edit_pushbutton = QPushButton(self.dehumidifierFrame)
         self.dehumidifier_edit_pushbutton.setObjectName("dehumidifier_edit_pushbutton")
-        self.verticalLayout.addWidget(self.dehumidifier_edit_pushbutton)
+        self.buttonsLayout.addWidget(self.dehumidifier_edit_pushbutton)
+        self.connectPushButton = QPushButton(self.dehumidifierFrame)
+        self.connectPushButton.setObjectName("connectPushButton")
+        self.buttonsLayout.addWidget(self.connectPushButton)
+        self.disconnectPushButton = QPushButton(self.dehumidifierFrame)
+        self.disconnectPushButton.setObjectName("disconnectPushButton")
+        self.buttonsLayout.addWidget(self.disconnectPushButton)
+        self.verticalLayout.addLayout(self.buttonsLayout)
         self.gridLayout.addWidget(self.dehumidifierFrame, 2, 0, 1, 1)
         self.title_label = QLabel(self)
         self.title_label.setObjectName("title_label")
@@ -350,9 +356,7 @@ class SettingsWindow(QDialog):
         self.buttonBox = QDialogButtonBox(self)
         self.buttonBox.setStyleSheet("font-size:13px;")
         self.buttonBox.setOrientation(Qt.Horizontal)
-        self.buttonBox.setStandardButtons(
-            QDialogButtonBox.Cancel | QDialogButtonBox.Save
-        )
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
         self.buttonBox.setCenterButtons(True)
         self.buttonBox.setObjectName("buttonBox")
         self.gridLayout.addWidget(self.buttonBox, 4, 0, 1, 2)
@@ -365,17 +369,19 @@ class SettingsWindow(QDialog):
         self.populateSettings()
 
         # Triggers
+        self.connectPushButton.clicked.connect(self.connectToDehumidifier)
+        self.disconnectPushButton.clicked.connect(self.disconnectDehumidifier)
         self.addPushButton.clicked.connect(self.add_new_dehumidifier)
         self.dehumidifier_edit_pushbutton.clicked.connect(self.handleClickEdit)
-        self.dehumidifier_delete_pushbutton.clicked.connect(self.handleClickDelete)
+        self.deleteDehumidifierpushButton.clicked.connect(self.handleClickDelete)
 
-        self.buttonBox.accepted.connect(self.handleAccept)  # type: ignore
+        self.buttonBox.accepted.connect(self.accept)  # type: ignore
         self.buttonBox.rejected.connect(self.reject)  # type: ignore
 
         QMetaObject.connectSlotsByName(self)
 
         self.dehumidifier_title_label.setText("Dehumidifiers:")
-        self.dehumidifier_delete_pushbutton.setText("Delete")
+        self.deleteDehumidifierpushButton.setText("Delete")
         self.dehumidifier_edit_pushbutton.setText("Edit")
         self.title_label.setText("Settings:")
         self.add_title_label.setText("Add New Dehumidifier Unit:")
@@ -407,6 +413,8 @@ class SettingsWindow(QDialog):
         self.lights_title_label.setText("Light Settings:")
         self.lights_on_label.setText("Lights On")
         self.lights_off_label.setText("Lights Off")
+        self.connectPushButton.setText("Connect")
+        self.disconnectPushButton.setText("Disconnect")
 
     def add_new_dehumidifier(self):
         JSONFileManager(selection="devices").create_file_if_not_exists()
@@ -528,6 +536,67 @@ class SettingsWindow(QDialog):
         off_time = QTime(off_hour, off_minute)
         self.lightsOnTimeEdit.setTime(on_time)
         self.lightsOffTimeEdit.setTime(off_time)
+
+    def connectToDehumidifier(self):
+        selected_index = self.dehumidifier_listview.currentIndex()
+        if selected_index.isValid():
+            device_id = self.model.data(selected_index, Qt.DisplayRole)[4:5]
+            record = JSONFileManager(selection="devices").get_object_by_id(id=device_id)
+            try:
+                dehumidifier = RoomController(ip=record["ip"], token=record["token"])
+                print(dehumidifier.device.info())
+                if record["active"] == True:
+                    self.show_warning_box(
+                        title="Device Active",
+                        warning="The device is already active.",
+                    )
+                    return
+                JSONFileManager(selection="devices").replace_object_by_id(
+                    id=record["id"],
+                    new_object={
+                        "id": record["id"],
+                        "ip": record["ip"],
+                        "token": record["token"],
+                        "active": True,
+                    },
+                )
+                self.show_warning_box(
+                    title="Device Located",
+                    warning="The device is now active.",
+                )
+            except:
+                self.show_warning_box(
+                    title="Device Not Found",
+                    warning="The device has not been found, please try again later.",
+                )
+        self.populateListView()
+
+    def disconnectDehumidifier(self):
+        selected_index = self.dehumidifier_listview.currentIndex()
+        if selected_index.isValid():
+            device_id = self.model.data(selected_index, Qt.DisplayRole)[4:5]
+            record = JSONFileManager(selection="devices").get_object_by_id(id=device_id)
+            if record["active"] == False:
+                self.show_warning_box(
+                    title="Device Disconnected",
+                    warning="The device is already Inactive.",
+                )
+                return
+            JSONFileManager(selection="devices").replace_object_by_id(
+                id=record["id"],
+                new_object={
+                    "id": record["id"],
+                    "ip": record["ip"],
+                    "token": record["token"],
+                    "active": False,
+                },
+            )
+
+            self.show_warning_box(
+                title="Device Disconnected",
+                warning="The device is now Inactive.",
+            )
+        self.populateListView()
 
     def handleClickEdit(self):
         selected_index = self.dehumidifier_listview.currentIndex()

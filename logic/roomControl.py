@@ -1,3 +1,5 @@
+import socket
+from miio.miioprotocol import MiIOProtocol
 from miio.miot_device import MiotDevice
 from miio.exceptions import *
 import time
@@ -119,16 +121,26 @@ class RoomController:
         target = self.get_target()
         if humidity == 0 or temperature == 0 or target == 0:
             return 0
-        data.append(humidity)
-        data.append(temperature)
-        data.append(target)
+        data.extend([humidity, temperature, target])
         return data
 
 
-# try:
-#     RoomController(
-#     ip="192.168.1.37", token="7110c3e10ebfc68c55bf44f0e610a15c"
-# ).device.info()
-#     print("ok")
-# except:
-#     print("not ok")
+# def get_device_ip(hostname):
+#     try:
+#         return socket.gethostbyname(hostname)
+#     except socket.gaierror:
+#         return None
+
+
+# devices = MiIOProtocol.discover()
+
+# for device in devices:
+#     model = device.model
+#     device_ip = get_device_ip(model + ".local")
+
+#     if device_ip:
+#         print("Device found:")
+#         print("IP:", device_ip)
+#         print("Token:", device.token)
+#         print("Model:", model)
+#         print()

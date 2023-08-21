@@ -4,7 +4,7 @@ import datetime as dt
 from logic.jsonFileManager import JSONFileManager
 from logic.roomControl import RoomController
 from gui.settingsUi import settingsUi, settingsApp
-
+from gui.debugWindow import debugWindowUi
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
@@ -42,6 +42,8 @@ UNIT_HUMIDITY_extracted_TARGETS = {"low": 60, "high": 70}
 class TheMainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
+        # debug messages
+        self.debug_messages = []
         self.setObjectName("MainWindow")
         self.resize(265, 584)
         self.setWindowTitle(("Gro-Ass"))
@@ -216,15 +218,20 @@ class TheMainWindow(QMainWindow):
         self.statusbar = QStatusBar(self)
         self.statusbar.setObjectName("statusbar")
         self.setStatusBar(self.statusbar)
+
         self.menuBar = QMenuBar(self)
-        self.menuBar.setGeometry(QRect(0, 0, 265, 28))
+        self.menuBar.setGeometry(QRect(0, 0, 265, 20))
         self.menuBar.setObjectName("menuBar")
         self.menuSettings = QMenu(self.menuBar)
         self.menuSettings.setObjectName("menuSettings")
+
         self.setMenuBar(self.menuBar)
         self.actionSettings = QAction(self)
         self.actionSettings.setObjectName("actionSettings")
+        self.actionDebug_Window = QAction(self)
+        self.actionDebug_Window.setObjectName("actionDebug_Window")
         self.menuSettings.addAction(self.actionSettings)
+        self.menuSettings.addAction(self.actionDebug_Window)
         self.menuBar.addAction(self.menuSettings.menuAction())
 
         # render text to display on screen
@@ -236,21 +243,27 @@ class TheMainWindow(QMainWindow):
         self.aircon_setting_label.setText(("Aircon Setting:"))
         self.lights_label.setText(("Lights:"))
         self.menuSettings.setTitle(("File"))
-        self.actionSettings.setText(("Settings"))
+        self.actionSettings.setText("Settings")
+        self.actionDebug_Window.setText("Debug Window")
 
+        self.debug_messages.append("loading variables for first time")
         # VARIABLES FOR DATA
         self.active_dehumidifier_list = []
+
         self.lightsOnTime = ""
         self.lightsOffTime = ""
         self.modes = ""
         self.areLightsOn = False
-
+        self.debug_messages.append("testing triggers")
         # click triggers
         self.units_combo.currentIndexChanged.connect(self.handleRefreshDehumidifierData)
         self.actionSettings.triggered.connect(self.handleOpenSettings)
+        self.actionDebug_Window.triggered.connect(self.handleOpenDebugWindow)
         self.mode_combo.currentIndexChanged.connect(self.handleModeColorChange)
 
         # first time function calls
+        self.debug_messages.append("refreshing screen")
+
         self.handleRefreshTime()
         self.handleModeComboBox()
         self.handleUnitComboBox()
@@ -258,6 +271,7 @@ class TheMainWindow(QMainWindow):
         self.handleLightColors()
         self.handleActiveDehumidifiersList()
         self.handleRefreshDehumidifierData()
+        self.debug_messages.append("setting timers and threads")
 
         #
         # Threads and Timers
@@ -301,35 +315,34 @@ class TheMainWindow(QMainWindow):
         #
 
         #
-        # Set timer for putting active dehumidifers into the list.
-        self.handleActiveDehumidifiersListTimer = QTimer()
-        self.handleActiveDehumidifiersListTimer.setInterval(
-            HANDLE_ACTIVE_DEHUMIDIFIERS_TIME_MILLIS
-        )
-        # connect timer to function
-        self.handleActiveDehumidifiersListTimer.timeout.connect(
-            self.handleActiveDehumidifiersList
-        )
-        # create thread for timer
-        self.handleActiveDehumidifiersListThread = QThread()
-        # move timer to thread
-        self.handleActiveDehumidifiersListTimer.moveToThread(
-            self.handleActiveDehumidifiersListThread
-        )
-        # connect thread to start timer when thread begins.
-        self.handleActiveDehumidifiersListThread.started.connect(
-            self.handleActiveDehumidifiersListTimer.start
-        )
-        # begin thread
-        self.handleActiveDehumidifiersListThread.start()
-        #
-        #
-        #
-
+        # # Set timer for putting active dehumidifers into the list.
+        # self.handleActiveDehumidifiersListTimer = QTimer()
+        # self.handleActiveDehumidifiersListTimer.setInterval(
+        #     HANDLE_ACTIVE_DEHUMIDIFIERS_TIME_MILLIS
+        # )
+        # # connect timer to function
+        # self.handleActiveDehumidifiersListTimer.timeout.connect(
+        #     self.handleActiveDehumidifiersList
+        # )
+        # # create thread for timer
+        # self.handleActiveDehumidifiersListThread = QThread()
+        # # move timer to thread
+        # self.handleActiveDehumidifiersListTimer.moveToThread(
+        #     self.handleActiveDehumidifiersListThread
+        # )
+        # # connect thread to start timer when thread begins.
+        # self.handleActiveDehumidifiersListThread.started.connect(
+        #     self.handleActiveDehumidifiersListTimer.start
+        # )
+        # # begin thread
+        # self.handleActiveDehumidifiersListThread.start()
+        # #
+        # #
+        # #
+        self.debug_messages.append("connecting slots")
         QMetaObject.connectSlotsByName(self)
 
     def handleSendCommands(self):
-        print("sending commands")
         # Requested mode from mode combo-box.
         selectedMode = self.mode_combo.currentText()
         # Open settings
@@ -342,18 +355,25 @@ class TheMainWindow(QMainWindow):
         for mode, targets in humidity_thresholds:
             if mode.lower() == selectedMode.lower():
                 extracted_targets = targets
+
         if len(self.active_dehumidifier_list) <= 0:
             return
+        self.debug_messages.append(("active list:", len(self.active_dehumidifier_list)))
+
         for data in self.active_dehumidifier_list:
             device_id = data[0]
             ip = data[1]
             token = data[2]
 
             # Connect to dehumidiifer
-
+            self.debug_messages.append("establishing conection")
             dehumidifier = RoomController(ip=ip, token=token)
             # Check humidity against targets.
+            self.debug_messages.append("checking humidity")
+
             # humidity good
+            self.debug_messages.append("connecting to unit")
+
             h, tr, t = dehumidifier.return_all_sensors()
             if h >= extracted_targets["low"] and h <= extracted_targets["high"]:
                 continue
@@ -374,18 +394,29 @@ class TheMainWindow(QMainWindow):
             elif h <= humidity_warning_thresholds["low"]:
                 # Issue command
                 dehumidifier.set_target(UNIT_HUMIDITY_extracted_TARGETS["high"])
+                self.debug_messages.append("warning humidity too low")
 
             elif h >= humidity_warning_thresholds["high"]:
                 # Issue command
                 dehumidifier.set_target(UNIT_HUMIDITY_extracted_TARGETS["low"])
+                self.debug_messages.append("warning humidity too high")
 
-    # make asyncronous
+            self.debug_messages.append("finished checks")
+
+            # # clear list
+            # self.active_dehumidifier_list=[]
+
     def handleRefreshDehumidifierData(self):
-        print("refreshing data")
+        self.debug_messages.append("refreshing screen with stored values")
         for unit in self.active_dehumidifier_list:
             # Try to connect with the dehumidifier using extracted ip and token.
             dehumidifier = RoomController(ip=unit[1], token=unit[2])
-            h, t, tr = dehumidifier.return_all_sensors()
+            data = dehumidifier.return_all_sensors()
+            h, t, tr = data
+            if len(data) == 0:
+                print("massive fuck up")
+                h, tr, t = 0, 0, 0
+
             # Add dehumidifier to list.
 
             if int(unit[0]) == int(self.units_combo.currentText()[4:5]):
@@ -394,10 +425,9 @@ class TheMainWindow(QMainWindow):
                 self.temperature_value.setText(f"{t}{degree_symbol}")
                 return
 
-    # make asyncronous
-
     def handleActiveDehumidifiersList(self):
-        print("checking active units")
+        self.debug_messages.append("checking active units")
+
         # Open and parse dehumidifier list.
         dehumidifiersList = JSONFileManager(selection="devices").read_json()
 
@@ -405,28 +435,49 @@ class TheMainWindow(QMainWindow):
         # Append active dehumidifiers to the active list.
         for unit in dehumidifiersList:
             # Try to connect with the dehumidifier using extracted ip and token.
-            dehumidifier = RoomController(ip=unit["ip"], token=unit["token"])
-            data = dehumidifier.return_all_sensors()
-            if data == 0:
-                unit["active"] = False
-                JSONFileManager(selection="devices").replace_object_by_id(
-                    unit["id"],
-                    new_object={
-                        "id": unit["id"],
-                        "ip": unit["ip"],
-                        "token": unit["token"],
-                        "active": False,
-                    },
-                )
-            else:
-                # Add dehumidifier to list.
-                self.active_dehumidifier_list.append(
-                    (
+            if unit["active"] == True:
+                dehumidifier = RoomController(ip=unit["ip"], token=unit["token"])
+                data = dehumidifier.return_all_sensors()
+                if data == 0:
+                    unit["active"] = False
+                    JSONFileManager(selection="devices").replace_object_by_id(
                         unit["id"],
-                        unit["ip"],
-                        unit["token"],
+                        new_object={
+                            "id": unit["id"],
+                            "ip": unit["ip"],
+                            "token": unit["token"],
+                            "active": False,
+                        },
                     )
-                )
+                else:
+                    # Add dehumidifier to list.
+                    self.debug_messages.append(str(len(self.active_dehumidifier_list)))
+
+                    if len(self.active_dehumidifier_list) == 0:
+                        self.active_dehumidifier_list.append(
+                            (
+                                unit["id"],
+                                unit["ip"],
+                                unit["token"],
+                            )
+                        )
+                        continue
+                    if unit["id"] in (
+                        entry[0] for entry in self.active_dehumidifier_list
+                    ):
+                        continue
+
+                    self.active_dehumidifier_list.append(
+                        (
+                            unit["id"],
+                            unit["ip"],
+                            unit["token"],
+                        )
+                    )
+
+            self.debug_messages.append("skipping disconnected unit")
+
+            continue
 
     def handleLightColors(self):
         # Open settings file.
@@ -491,13 +542,14 @@ class TheMainWindow(QMainWindow):
         # Change color of combo-box to match current selection
         return
 
+    def handleOpenDebugWindow(self):
+        debugWindowUi.exec_()
+
     def handleOpenSettings(self):
         settingsUi.exec_()
-        return
 
     def handleSetAirConValue(self):
         self.aircon_value.setText((f"# {degree_symbol}"))
-        return
 
     def handleModeColorChange(self):
         if self.mode_combo.currentText().lower() == "vegetative":
@@ -506,7 +558,6 @@ class TheMainWindow(QMainWindow):
             self.mode_combo.setStyleSheet("background-color: rgb(216, 191, 216);")
         if self.mode_combo.currentText().lower() == "curing":
             self.mode_combo.setStyleSheet("background-color: rgb(240, 230, 140);")
-        return
 
     def handleRefreshTime(self):
         # Get time now and extract nessesary values.
