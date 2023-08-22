@@ -1,6 +1,7 @@
 # Growroom Assistant
 
 The Growroom Assistant is your solution for indoor gardening success, providing effortless humidity management and the ideal growth environment for various plant stages. This application, designed for efficiency, operates on the PyQt framework and gives you control over dehumidifiers and air conditioners. By optimizing your plant's cultivation environment, the Growroom Assistant empowers you to create the perfect conditions for growth.
+> **Note:** tested with dehumidifier model "nwt.derh.312en".
 
 ## Features
 
@@ -32,7 +33,7 @@ python main.py
 
 When configuring your devices, you have the option to add device details, including the ID, IP address, and token, directly within the app's settings. This streamlines the process and eliminates the need to manually edit the `dehumidifiers.json` file.
 
-> **Note:** To obtain the necessary IP addresses and tokens for your devices, use the Miio CLI commands provided the python-miio library (miiocli discover, miiocli cloud).
+> **Important:** To obtain the necessary IP addresses and tokens for your devices, use the Miio CLI commands provided the python-miio library (miiocli discover, miiocli cloud).
 
 > **Warning:** You will need a valid account craeted with the smart app associated with the device in order to use the cloud command.
 

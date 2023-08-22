@@ -1,4 +1,4 @@
-__pycache__/
-/gui/__pycache__/
-/logic/__pycache__/
-/config/dehumidifiers.json
+__pycache__
+/gui/__pycache__
+/logic/__pycache__
+gui/config/dehumidifiers.json
