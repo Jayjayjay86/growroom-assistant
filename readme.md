@@ -1,47 +1,67 @@
 # Growroom Assistant
 
-The Growroom Assistant is an application designed to assist indoor gardeners in managing humidity levels and environmental conditions during various growing phases. It utilizes the PyQt framework along with the tinytuya and python-miio libraries to control dehumidifiers and air conditioners, ensuring optimal conditions for plant growth.
-
-
-You must already have your dehumdfiers token ready, via registering with the app and subsequently using either the website api or at the terminal with:
-``` miiocli cloud```
-filling out the stages and receiving the token/s.
-
+The Growroom Assistant is your solution for indoor gardening success, providing effortless humidity management and the ideal growth environment for various plant stages. This application, designed for efficiency, operates on the PyQt framework and gives you control over dehumidifiers and air conditioners. By optimizing your plant's cultivation environment, the Growroom Assistant empowers you to create the perfect conditions for growth.
 
 ## Features
-Manual configuration of devices through settings files.
-Customizable humidity levels for different growing phases.
-Future feature: Nighttime temperature simulation using air conditioners.
+
+- **Easy Device Setup**: Setting up your devices is hassle-free with the Growroom Assistant. You can add device details, including IP addresses and tokens, directly within the app's user-friendly settings. To obtain the required IP addresses and tokens, use the Miio CLI cloud commands.
+
+- **Tailored Humidity Control**: Take charge of your plant's growth journey by setting customizable humidity levels for different phases. This flexibility ensures that your plants experience optimal conditions at each stage.
+
+- **Cooler Nighttime Environment (Upcoming)**: An exciting upcoming feature allows you to simulate cooler nighttime temperatures using air conditioners, further refining your plant's environment.
+
 ## Getting Started
-### Installation:
-Install the required dependencies using the provided requirements file:
 
-```pip install -r requirements.txt```
+### Installation
 
-### Running the App:
-To start the application, execute:
+To get started, install the required dependencies from the provided `requirements.txt` file:
 
+```shell
+pip install -r requirements.txt
+```
 
-```python main.py```
+### Running the App
 
-### Initial Setup:
+Launch the application by executing the following command:
 
-If no dehumidifiers are listed in the dehumidifiers.json file, the app's settings will prompt you to provide the details of an active unit.
-Once configured, the app will control the active devices according to the settings.
-Configuration:
+```shell
+python main.py
+```
 
-Modify the dehumidifiers.json file to include dehumidifiers' id, ip, token, and active status.
-Adjust growing phase settings using the settings.json file or through the settings menu in the app.
-Usage:
+### Initial Setup
 
-Run the app and follow prompts to set up devices and desired humidity levels.
-Allow the app to manage humidity levels throughout different growing phases.
+When configuring your devices, you have the option to add device details, including the ID, IP address, and token, directly within the app's settings. This streamlines the process and eliminates the need to manually edit the `dehumidifiers.json` file.
 
+To obtain the necessary IP addresses and tokens for your devices, use the Miio CLI cloud commands provided by the manufacturer.
 
-Future feature: Configure air conditioners to reduce night-time temperatures.
+### Configuration
+
+Tailor the application to your specific needs with these steps:
+
+1. Access the app's settings and look for the option to add device details.
+
+2. Alternatively, you can still modify the `dehumidifiers.json` file if you prefer to manage device information manually.
+
+3. Adjust settings for different growth phases using the `settings.json` file or directly from the app's settings menu.
+
+### Usage
+
+Here's how to make the most of the Growroom Assistant:
+
+1. Open the app and follow the prompts to configure your devices and set desired humidity levels.
+
+2. Once configured, let the application seamlessly manage humidity levels during various growth phases.
+
+3. Stay tuned for the upcoming feature that enables configuring air conditioners for a cooler nighttime environment, benefiting your plants.
+
+### Debugging and Connectivity
+
+For those intrigued by technical details, a debugging feature logs interactions to a JSON file. Additionally, within the settings, you can manually connect or disconnect operations with the dehumidifier unit. To enable these features, ensure you have the IP and token obtained from the Miio CLI. Remember, you need to obtain these details independently; the app doesn't handle this for you. Also, ensure your device is registered with the online app to access Miio CLI cloud capabilities.
 
 ## Contributing
-Contributions and suggestions are welcome! Feel free to submit pull requests or issues if you encounter problems or have ideas for improvements.
+
+Contributions and suggestions are enthusiastically welcomed! As a solo developer, your input is highly valuable. Feel free to submit pull requests or create issues for any encountered problems or ideas for improvements.
 
 ## License
-This project is licensed under the MIT License. See the LICENSE file for details.
+
+This project is licensed under the MIT License. Refer to the `LICENSE` file in the repository for more details.

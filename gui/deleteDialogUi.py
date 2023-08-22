@@ -2,6 +2,7 @@ import sys
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
+from logic.jsonFileManager import JSONFileManager
 
 
 class DeleteDialogUi(QDialog):
@@ -40,8 +41,11 @@ class DeleteDialogUi(QDialog):
         self.horizontalLayout.addLayout(self.buttonVerticalLayout)
 
         self.retranslateUi(Dialog)
-        self.buttonBox.accepted.connect(self.accept)  # type: ignore
+        self.buttonBox.accepted.connect(self.deleteFromDeviceList)  # type: ignore
         self.buttonBox.rejected.connect(self.reject)  # type: ignore
         QMetaObject.connectSlotsByName(Dialog)
+        self.warning_label.setText(f"Remove device with id - {device_id} From List?")
 
-        self.warning_label.setText("Remove From List?")
+    def deleteFromDeviceList(self):
+        JSONFileManager(selection="devices").delete_by_id(device_id)
+        self.accept()

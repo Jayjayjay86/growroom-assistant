@@ -1,8 +1,8 @@
 import socket
-from miio.miioprotocol import MiIOProtocol
 from miio.miot_device import MiotDevice
 from miio.exceptions import *
 import time
+import json
 
 
 class RoomController:
@@ -123,24 +123,3 @@ class RoomController:
             return 0
         data.extend([humidity, temperature, target])
         return data
-
-
-# def get_device_ip(hostname):
-#     try:
-#         return socket.gethostbyname(hostname)
-#     except socket.gaierror:
-#         return None
-
-
-# devices = MiIOProtocol.discover()
-
-# for device in devices:
-#     model = device.model
-#     device_ip = get_device_ip(model + ".local")
-
-#     if device_ip:
-#         print("Device found:")
-#         print("IP:", device_ip)
-#         print("Token:", device.token)
-#         print("Model:", model)
-#         print()

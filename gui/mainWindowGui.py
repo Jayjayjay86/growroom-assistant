@@ -4,11 +4,11 @@ import datetime as dt
 from logic.jsonFileManager import JSONFileManager
 from logic.roomControl import RoomController
 from gui.settingsUi import settingsUi, settingsApp
-from gui.debugWindow import debugWindowUi
+import logging
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
-
+from logic.logging import makeLog
 
 style_lights_on = (
     "border-radius:10px;\n"
@@ -230,6 +230,8 @@ class TheMainWindow(QMainWindow):
         self.actionSettings.setObjectName("actionSettings")
         self.actionDebug_Window = QAction(self)
         self.actionDebug_Window.setObjectName("actionDebug_Window")
+        self.actionDebug_Window.setCheckable(True)
+        self.actionDebug_Window.setChecked(False)
         self.menuSettings.addAction(self.actionSettings)
         self.menuSettings.addAction(self.actionDebug_Window)
         self.menuBar.addAction(self.menuSettings.menuAction())
@@ -244,21 +246,20 @@ class TheMainWindow(QMainWindow):
         self.lights_label.setText(("Lights:"))
         self.menuSettings.setTitle(("File"))
         self.actionSettings.setText("Settings")
-        self.actionDebug_Window.setText("Debug Window")
+        self.actionDebug_Window.setText("Debug")
 
-        self.debug_messages.append("loading variables for first time")
         # VARIABLES FOR DATA
         self.active_dehumidifier_list = []
-
         self.lightsOnTime = ""
         self.lightsOffTime = ""
         self.modes = ""
         self.areLightsOn = False
         self.debug_messages.append("testing triggers")
+
         # click triggers
         self.units_combo.currentIndexChanged.connect(self.handleRefreshDehumidifierData)
         self.actionSettings.triggered.connect(self.handleOpenSettings)
-        self.actionDebug_Window.triggered.connect(self.handleOpenDebugWindow)
+        self.actionDebug_Window.triggered.connect(self.toggle_debug)
         self.mode_combo.currentIndexChanged.connect(self.handleModeColorChange)
 
         # first time function calls
@@ -542,8 +543,22 @@ class TheMainWindow(QMainWindow):
         # Change color of combo-box to match current selection
         return
 
-    def handleOpenDebugWindow(self):
-        debugWindowUi.exec_()
+    def toggle_debug(self):
+        debug_mode_enabled = self.actionDebug_Window.isChecked()
+        print(debug_mode_enabled)
+        # Update logging level based on debug mode
+        if debug_mode_enabled:
+            makeLog()  # Initialize logging if not already initialized
+            logging.getLogger().setLevel(logging.DEBUG)
+
+            logging.debug("Debug mode enabled")
+            self.show_warning_box(title="Debug Mode:", warning="Debug mode enabled")
+        else:
+            logging.getLogger().setLevel(logging.WARNING)
+            logging.debug("Debug mode disabled")
+            self.show_warning_box(title="Debug Mode:", warning="Debug mode disabled")
+        # Update the checked state of the menu item only once at the end
+        self.actionDebug_Window.setChecked(debug_mode_enabled)
 
     def handleOpenSettings(self):
         settingsUi.exec_()
@@ -580,6 +595,13 @@ class TheMainWindow(QMainWindow):
         self.month_value.setText(month_name)
         self.time_value.setText(f"{time_now}")
         return
+
+    def show_warning_box(self, title, warning):
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Warning)
+        msg_box.setWindowTitle(title)
+        msg_box.setText(warning)
+        msg_box.exec_()
 
 
 app = QApplication(sys.argv)

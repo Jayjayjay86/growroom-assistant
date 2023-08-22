@@ -369,8 +369,8 @@ class SettingsWindow(QDialog):
         self.populateSettings()
 
         # Triggers
-        self.connectPushButton.clicked.connect(self.connectToDehumidifier)
-        self.disconnectPushButton.clicked.connect(self.disconnectDehumidifier)
+        self.connectPushButton.clicked.connect(self.handleClickConnect)
+        self.disconnectPushButton.clicked.connect(self.handleClickDisconnect)
         self.addPushButton.clicked.connect(self.add_new_dehumidifier)
         self.dehumidifier_edit_pushbutton.clicked.connect(self.handleClickEdit)
         self.deleteDehumidifierpushButton.clicked.connect(self.handleClickDelete)
@@ -537,7 +537,7 @@ class SettingsWindow(QDialog):
         self.lightsOnTimeEdit.setTime(on_time)
         self.lightsOffTimeEdit.setTime(off_time)
 
-    def connectToDehumidifier(self):
+    def handleClickConnect(self):
         selected_index = self.dehumidifier_listview.currentIndex()
         if selected_index.isValid():
             device_id = self.model.data(selected_index, Qt.DisplayRole)[4:5]
@@ -571,7 +571,7 @@ class SettingsWindow(QDialog):
                 )
         self.populateListView()
 
-    def disconnectDehumidifier(self):
+    def handleClickDisconnect(self):
         selected_index = self.dehumidifier_listview.currentIndex()
         if selected_index.isValid():
             device_id = self.model.data(selected_index, Qt.DisplayRole)[4:5]
@@ -596,6 +596,7 @@ class SettingsWindow(QDialog):
                 title="Device Disconnected",
                 warning="The device is now Inactive.",
             )
+
         self.populateListView()
 
     def handleClickEdit(self):
@@ -613,13 +614,9 @@ class SettingsWindow(QDialog):
     def handleClickDelete(self):
         selected_index = self.dehumidifier_listview.currentIndex()
         if selected_index.isValid():
-            device_id = self.model.data(selected_index, Qt.DisplayRole)
-            window = DeleteDialogUiDialogUi(int(device_id=device_id[4:5]))
+            device_id = self.model.data(selected_index, Qt.DisplayRole)[4:5]
+            window = DeleteDialogUiDialogUi(int(device_id=device_id))
             window.exec_()
-        else:
-            return
-
-        return
 
     def populateListView(self):
         self.model.clear()

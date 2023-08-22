@@ -9,7 +9,6 @@ from logic.roomControl import RoomController
 class EditDialogUi(QDialog):
     def __init__(self, device_id) -> None:
         super().__init__()
-        self.device_id = device_id
         self.setObjectName("Dialog")
         self.setWindowTitle("Edit")
         self.resize(456, 174)
@@ -108,9 +107,6 @@ class EditDialogUi(QDialog):
         self.ip_label.setText("Ip:")
         self.token_label.setText("token:")
 
-        # initialize values
-        self.id = int()
-        self.active = bool()
         # function calls
         self.populate_fields()
 
@@ -122,40 +118,28 @@ class EditDialogUi(QDialog):
                 self.token_lineEdit.setText(device["token"])
 
     def handlesaveDetails(self):
-        dehumidifierUnitList = JSONFileManager(selection="devices").read_json()
-        new_ip = self.ip_lineEdit.text()
-        new_token = self.token_lineEdit.text()
-
-        for unit in dehumidifierUnitList:
-            if self.device_id == int(unit["id"]):
-                self.id = int(unit["id"])
-                self.active = unit["active"]
-
-            try:
-                RoomController(ip=new_ip, token=new_token).device.info()
-                new_active = True
-
-            except:
-                new_active = False
-                self.show_warning_box(title="Error!", warning="Unit Not Found")
-                return
-            new_object = {
-                "id": self.id,
-                "ip": new_ip,
-                "token": new_token,
-                "active": new_active,
-            }
-            if self.active:
-                # do something to stop the room search before updating list
-                self.show_warning_box(
-                    title="Error!", warning="Device currently in use."
-                )
-            else:
-                JSONFileManager(selection="devices").replace_object_by_id(
-                    id=self.device_id, new_object=new_object
-                )
-                self.show_warning_box(title="Completed", warning="Details updated.")
-                self.accept()
+        record = JSONFileManager(selection="devices").get_object_by_id(device_id)
+        try:
+            RoomController(
+                ip=self.ip_lineEdit.text(), token=self.token_lineEdit.text()
+            ).device.info()
+        except:
+            self.show_warning_box(title="Error!", warning="Unit Not Found")
+            self.reject()
+        new_object = {
+            "id": device_id,
+            "ip": self.ip_lineEdit.text(),
+            "token": self.token_lineEdit.text(),
+            "active": True,
+        }
+        if record["active"]:
+            self.show_warning_box(title="Error!", warning="Device currently in use.")
+        else:
+            JSONFileManager(selection="devices").replace_object_by_id(
+                id=device_id, new_object=new_object
+            )
+            self.show_warning_box(title="Completed", warning="Details updated.")
+            self.accept()
 
     def show_warning_box(self, title, warning):
         msg_box = QMessageBox()
