@@ -413,11 +413,12 @@ class TheMainWindow(QMainWindow):
             # Try to connect with the dehumidifier using extracted ip and token.
             dehumidifier = RoomController(ip=unit[1], token=unit[2])
             data = dehumidifier.return_all_sensors()
-            h, t, tr = data
-            if len(data) == 0:
-                print("massive fuck up")
+            try:
+                h, t, tr = data
+            except:
+                print(data)
                 h, tr, t = 0, 0, 0
-
+                logging.warning("device couldn't be located")
             # Add dehumidifier to list.
 
             if int(unit[0]) == int(self.units_combo.currentText()[4:5]):
@@ -545,7 +546,6 @@ class TheMainWindow(QMainWindow):
 
     def toggle_debug(self):
         debug_mode_enabled = self.actionDebug_Window.isChecked()
-        print(debug_mode_enabled)
         # Update logging level based on debug mode
         if debug_mode_enabled:
             makeLog()  # Initialize logging if not already initialized

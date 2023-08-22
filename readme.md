@@ -32,7 +32,9 @@ python main.py
 
 When configuring your devices, you have the option to add device details, including the ID, IP address, and token, directly within the app's settings. This streamlines the process and eliminates the need to manually edit the `dehumidifiers.json` file.
 
-To obtain the necessary IP addresses and tokens for your devices, use the Miio CLI cloud commands provided by the manufacturer.
+> **Note:** To obtain the necessary IP addresses and tokens for your devices, use the Miio CLI commands provided the python-miio library (miiocli discover, miiocli cloud).
+
+> **Warning:** You will need a valid account craeted with the smart app associated with the device in order to use the cloud command.
 
 ### Configuration
 
@@ -52,11 +54,18 @@ Here's how to make the most of the Growroom Assistant:
 
 2. Once configured, let the application seamlessly manage humidity levels during various growth phases.
 
-3. Stay tuned for the upcoming feature that enables configuring air conditioners for a cooler nighttime environment, benefiting your plants.
+3. Stay tuned for the upcoming feature that enables configuring air conditioners for a cooler nighttime environment.
 
 ### Debugging and Connectivity
 
 For those intrigued by technical details, a debugging feature logs interactions to a JSON file. Additionally, within the settings, you can manually connect or disconnect operations with the dehumidifier unit. To enable these features, ensure you have the IP and token obtained from the Miio CLI. Remember, you need to obtain these details independently; the app doesn't handle this for you. Also, ensure your device is registered with the online app to access Miio CLI cloud capabilities.
+## Screenshots
+
+Screenshot of the main window:
+![Screenshot 1](/menu.png)
+
+Screenshot of the settings window:
+![Screenshot 2](/settings.png)
 
 ## Contributing
 
