@@ -60,6 +60,7 @@ Here's how to make the most of the Growroom Assistant:
 ### Debugging and Connectivity
 
 For those intrigued by technical details, a debugging feature logs interactions to a JSON file. Additionally, within the settings, you can manually connect or disconnect operations with the dehumidifier unit. To enable these features, ensure you have the IP and token obtained from the Miio CLI. Remember, you need to obtain these details independently; the app doesn't handle this for you. Also, ensure your device is registered with the online app to access Miio CLI cloud capabilities.
+
 ## Screenshots
 
 Screenshot of the main window:
